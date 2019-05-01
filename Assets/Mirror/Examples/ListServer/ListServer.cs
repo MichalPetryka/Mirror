@@ -116,7 +116,7 @@ namespace Mirror.Examples.ListServer
             if (writer.BaseStream.Position <= 128)
             {
                 // send it
-                gameServerToListenConnection.Send(((MemoryStream)writer.BaseStream).ToArray());
+                gameServerToListenConnection.Send(((MemoryStream)writer.BaseStream).ToArraySegment());
             }
             else Debug.LogError("[List Server] List Server will reject messages longer than 128 bytes. Please use a shorter title.");
         }

@@ -102,7 +102,7 @@ namespace Mirror
                 netId = netId,
                 componentIndex = ComponentIndex,
                 functionHash = (invokeClass + ":" + cmdName).GetStableHashCode(), // type+func so Inventory.RpcUse != Equipment.RpcUse
-                payload = writer.ToArray()
+                payload = writer.ToArraySegment()
             };
 
             ClientScene.readyConnection.Send(message, channelId);
@@ -138,7 +138,7 @@ namespace Mirror
                 netId = netId,
                 componentIndex = ComponentIndex,
                 functionHash = (invokeClass + ":" + rpcName).GetStableHashCode(), // type+func so Inventory.RpcUse != Equipment.RpcUse
-                payload = writer.ToArray()
+                payload = writer.ToArraySegment()
             };
 
             NetworkServer.SendToReady(netIdentity, message, channelId);
@@ -177,7 +177,7 @@ namespace Mirror
                 netId = netId,
                 componentIndex = ComponentIndex,
                 functionHash = (invokeClass + ":" + rpcName).GetStableHashCode(), // type+func so Inventory.RpcUse != Equipment.RpcUse
-                payload = writer.ToArray()
+                payload = writer.ToArraySegment()
             };
 
             conn.Send(message, channelId);
@@ -206,7 +206,7 @@ namespace Mirror
                 netId = netId,
                 componentIndex = ComponentIndex,
                 functionHash = (invokeClass + ":" + eventName).GetStableHashCode(), // type+func so Inventory.RpcUse != Equipment.RpcUse
-                payload = writer.ToArray()
+                payload = writer.ToArraySegment()
             };
 
             NetworkServer.SendToReady(netIdentity,message, channelId);

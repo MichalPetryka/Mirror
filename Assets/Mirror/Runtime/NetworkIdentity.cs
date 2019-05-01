@@ -579,7 +579,7 @@ namespace Mirror
 
         // serialize all components (or only dirty ones if not initial state)
         // -> returns serialized data of everything dirty,  null if nothing was dirty
-        internal byte[] OnSerializeAllSafely(bool initialState)
+        internal ArraySegment<byte> OnSerializeAllSafely(bool initialState)
         {
             // reset cached writer length and position
             onSerializeWriter.SetLength(0);
@@ -587,12 +587,12 @@ namespace Mirror
             if (networkBehavioursCache.Length > 64)
             {
                 Debug.LogError("Only 64 NetworkBehaviour components are allowed for NetworkIdentity: " + name + " because of the dirtyComponentMask");
-                return null;
+                return default;
             }
             ulong dirtyComponentsMask = GetDirtyMask(networkBehavioursCache, initialState);
 
             if (dirtyComponentsMask == 0L)
-                return null;
+                return default;
 
             onSerializeWriter.WritePackedUInt64(dirtyComponentsMask); // WritePacked64 so we don't write full 8 bytes if we don't have to
 
@@ -616,7 +616,7 @@ namespace Mirror
                 }
             }
 
-            return onSerializeWriter.ToArray();
+            return onSerializeWriter.ToArraySegment();
         }
 
         ulong GetDirtyMask(NetworkBehaviour[] components, bool initialState)
@@ -1034,8 +1034,8 @@ namespace Mirror
                 return;
 
             // serialize all the dirty components and send (if any were dirty)
-            byte[] payload = OnSerializeAllSafely(false);
-            if (payload != null)
+            ArraySegment<byte> payload = OnSerializeAllSafely(false);
+            if (payload.Array != null)
             {
                 // populate cached UpdateVarsMessage and send
                 varsMessage.netId = netId;

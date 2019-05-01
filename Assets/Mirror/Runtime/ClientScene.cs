@@ -330,7 +330,7 @@ namespace Mirror
             return null;
         }
 
-        static void ApplySpawnPayload(NetworkIdentity identity, Vector3 position, Quaternion rotation, Vector3 scale, byte[] payload, uint netId)
+        static void ApplySpawnPayload(NetworkIdentity identity, Vector3 position, Quaternion rotation, Vector3 scale, ArraySegment<byte> payload, uint netId)
         {
             if (!identity.gameObject.activeSelf)
             {
@@ -339,7 +339,7 @@ namespace Mirror
             identity.transform.position = position;
             identity.transform.rotation = rotation;
             identity.transform.localScale = scale;
-            if (payload != null && payload.Length > 0)
+            if (payload.Array != null && payload.Count > 0)
             {
                 NetworkReader payloadReader = new NetworkReader(payload);
                 identity.OnUpdateVars(payloadReader, true);

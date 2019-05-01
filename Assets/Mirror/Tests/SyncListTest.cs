@@ -13,7 +13,7 @@ namespace Mirror.Tests
         {
             NetworkWriter writer = new NetworkWriter();
             fromList.OnSerializeAll(writer);
-            NetworkReader reader = new NetworkReader(writer.ToArray());
+            NetworkReader reader = new NetworkReader(writer.ToArraySegment());
             toList.OnDeserializeAll(reader);
         }
 
@@ -21,7 +21,7 @@ namespace Mirror.Tests
         {
             NetworkWriter writer = new NetworkWriter();
             fromList.OnSerializeDelta(writer);
-            NetworkReader reader = new NetworkReader(writer.ToArray());
+            NetworkReader reader = new NetworkReader(writer.ToArraySegment());
             toList.OnDeserializeDelta(reader);
             fromList.Flush();
         }

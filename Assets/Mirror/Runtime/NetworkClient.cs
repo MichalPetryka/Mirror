@@ -42,7 +42,7 @@ namespace Mirror
         // local client in host mode might call Cmds/Rpcs during Update, but we
         // want to apply them in LateUpdate like all other Transport messages
         // to avoid race conditions. keep packets in Queue until LateUpdate.
-        internal static Queue<byte[]> localClientPacketQueue = new Queue<byte[]>();
+        internal static Queue<ArraySegment<byte>> localClientPacketQueue = new Queue<ArraySegment<byte>>();
 
         // connect remote
         public static void Connect(string address)
@@ -218,8 +218,8 @@ namespace Mirror
                 // process internal messages so they are applied at the correct time
                 while (localClientPacketQueue.Count > 0)
                 {
-                    byte[] packet = localClientPacketQueue.Dequeue();
-                    OnDataReceived(new ArraySegment<byte>(packet));
+                    ArraySegment<byte> packet = localClientPacketQueue.Dequeue();
+                    OnDataReceived(packet);
                 }
             }
             else

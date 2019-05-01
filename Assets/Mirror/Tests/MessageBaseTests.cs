@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 
 namespace Mirror.Tests
@@ -39,7 +40,7 @@ namespace Mirror.Tests
             NetworkWriter w = new NetworkWriter();
             w.Write(new TestMessage(1, "2", 3.3));
 
-            byte[] arr = w.ToArray();
+            ArraySegment<byte> arr = w.ToArraySegment();
 
             NetworkReader r = new NetworkReader(arr);
             TestMessage t = new TestMessage();

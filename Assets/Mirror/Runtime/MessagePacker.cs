@@ -32,7 +32,7 @@ namespace Mirror
         // pack message before sending
         // -> pass writer instead of byte[] so we can reuse it
         [EditorBrowsable(EditorBrowsableState.Never), Obsolete("Use Pack<T> instead")]
-        public static byte[] PackMessage(int msgType, MessageBase msg)
+        public static ArraySegment<byte> PackMessage(int msgType, MessageBase msg)
         {
             // reset cached writer length and position
             packWriter.SetLength(0);
@@ -44,11 +44,11 @@ namespace Mirror
             msg.Serialize(packWriter);
 
             // return byte[]
-            return packWriter.ToArray();
+            return packWriter.ToArraySegment();
         }
 
         // pack message before sending
-        public static byte[] Pack<T>(T message) where T : IMessageBase
+        public static ArraySegment<byte> Pack<T>(T message) where T : IMessageBase
         {
             // reset cached writer length and position
             packWriter.SetLength(0);
@@ -61,11 +61,11 @@ namespace Mirror
             message.Serialize(packWriter);
 
             // return byte[]
-            return packWriter.ToArray();
+            return packWriter.ToArraySegment();
         }
 
         // unpack a message we received
-        public static T Unpack<T>(byte[] data) where T : IMessageBase, new()
+        public static T Unpack<T>(ArraySegment<byte> data) where T : IMessageBase, new()
         {
             NetworkReader reader = new NetworkReader(data);
 

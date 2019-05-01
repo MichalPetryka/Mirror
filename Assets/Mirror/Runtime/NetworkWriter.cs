@@ -5,6 +5,14 @@ using UnityEngine;
 
 namespace Mirror
 {
+    public static class MemoryStreamExtension
+    {
+        public static ArraySegment<byte> ToArraySegment(this MemoryStream stream)
+        {
+            return new ArraySegment<byte>(stream.GetBuffer(), 0, (int)stream.Length);
+        }
+    }
+
     // Binary stream Writer. Supports simple types, buffers, arrays, structs, and nested types
     public class NetworkWriter
     {
@@ -24,11 +32,11 @@ namespace Mirror
         // Position is used to indicate where we are writing
         // Length is how much data we have written
         // capacity is how much memory we have allocated
-        // ToArray returns all the data we have written,  regardless of the current position
-        public byte[] ToArray()
+        // ToArraySegment returns all the data we have written,  regardless of the current position
+        public ArraySegment<byte> ToArraySegment()
         {
             writer.Flush();
-            return ((MemoryStream)writer.BaseStream).ToArray();
+            return ((MemoryStream)writer.BaseStream).ToArraySegment();
         }
 
         // reset both the position and length of the stream,  but leaves the capacity the same

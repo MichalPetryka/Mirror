@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 namespace Mirror.Tests
 {
@@ -12,7 +13,7 @@ namespace Mirror.Tests
                 value = "Hello world"
             };
 
-            byte[] data = MessagePacker.Pack(message);
+            ArraySegment<byte> data = MessagePacker.Pack(message);
 
             SceneMessage unpacked = MessagePacker.Unpack<SceneMessage>(data);
 

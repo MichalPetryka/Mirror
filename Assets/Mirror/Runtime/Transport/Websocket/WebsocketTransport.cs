@@ -67,7 +67,7 @@ namespace Mirror.Websocket
             }
         }
 
-        public override bool ClientSend(int channelId, byte[] data) { client.Send(data); return true; }
+        public override bool ClientSend(int channelId, ArraySegment<byte> data) { client.Send(data); return true; }
 
         public override void ClientDisconnect() => client.Disconnect();
 
@@ -91,7 +91,7 @@ namespace Mirror.Websocket
             server.Listen(port);
         }
 
-        public override bool ServerSend(int connectionId, int channelId, byte[] data)
+        public override bool ServerSend(int connectionId, int channelId, ArraySegment<byte> data)
         {
             server.Send(connectionId, data);
             return true;

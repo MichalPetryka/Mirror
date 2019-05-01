@@ -171,7 +171,7 @@ namespace Mirror
             if (identity != null && identity.observers != null)
             {
                 // pack message into byte[] once
-                byte[] bytes = MessagePacker.PackMessage((ushort)msgType, msg);
+                ArraySegment<byte> bytes = MessagePacker.PackMessage((ushort)msgType, msg);
 
                 // send to all observers
                 bool result = true;
@@ -193,7 +193,7 @@ namespace Mirror
             if (identity != null && identity.observers != null)
             {
                 // pack message into byte[] once
-                byte[] bytes = MessagePacker.Pack(msg);
+                ArraySegment<byte> bytes = MessagePacker.Pack(msg);
 
                 bool result = true;
                 foreach (KeyValuePair<int, NetworkConnection> kvp in identity.observers)
@@ -211,7 +211,7 @@ namespace Mirror
             if (LogFilter.Debug) Debug.Log("Server.SendToAll id:" + msgType);
 
             // pack message into byte[] once
-            byte[] bytes = MessagePacker.PackMessage((ushort)msgType, msg);
+            ArraySegment<byte> bytes = MessagePacker.PackMessage((ushort)msgType, msg);
 
             // send to all
             bool result = true;
@@ -227,7 +227,7 @@ namespace Mirror
             if (LogFilter.Debug) Debug.Log("Server.SendToAll id:" + typeof(T));
 
             // pack message into byte[] once
-            byte[] bytes = MessagePacker.Pack(msg);
+            ArraySegment<byte> bytes = MessagePacker.Pack(msg);
 
             bool result = true;
             foreach (KeyValuePair<int, NetworkConnection> kvp in connections)
@@ -245,7 +245,7 @@ namespace Mirror
             if (identity != null && identity.observers != null)
             {
                 // pack message into byte[] once
-                byte[] bytes = MessagePacker.PackMessage((ushort)msgType, msg);
+                ArraySegment<byte> bytes = MessagePacker.PackMessage((ushort)msgType, msg);
 
                 // send to all ready observers
                 bool result = true;
@@ -268,7 +268,7 @@ namespace Mirror
             if (identity != null && identity.observers != null)
             {
                 // pack message into byte[] once
-                byte[] bytes = MessagePacker.Pack(msg);
+                ArraySegment<byte> bytes = MessagePacker.Pack(msg);
 
                 bool result = true;
                 foreach (KeyValuePair<int, NetworkConnection> kvp in identity.observers)

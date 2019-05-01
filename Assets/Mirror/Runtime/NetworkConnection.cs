@@ -119,30 +119,30 @@ namespace Mirror
         public virtual bool Send(int msgType, MessageBase msg, int channelId = Channels.DefaultReliable)
         {
             // pack message and send
-            byte[] message = MessagePacker.PackMessage(msgType, msg);
+            ArraySegment<byte> message = MessagePacker.PackMessage(msgType, msg);
             return SendBytes(message, channelId);
         }
 
         public virtual bool Send<T>(T msg, int channelId = Channels.DefaultReliable) where T: IMessageBase
         {
             // pack message and send
-            byte[] message = MessagePacker.Pack(msg);
+            ArraySegment<byte> message = MessagePacker.Pack(msg);
             return SendBytes(message, channelId);
         }
 
         // internal because no one except Mirror should send bytes directly to
         // the client. they would be detected as a message. send messages instead.
-        internal virtual bool SendBytes(byte[] bytes, int channelId = Channels.DefaultReliable)
+        internal virtual bool SendBytes(ArraySegment<byte> bytes, int channelId = Channels.DefaultReliable)
         {
-            if (logNetworkMessages) Debug.Log("ConnectionSend con:" + connectionId + " bytes:" + BitConverter.ToString(bytes));
+            if (logNetworkMessages) Debug.Log("ConnectionSend con:" + connectionId + " bytes:" + BitConverter.ToString(bytes.Array, bytes.Offset, bytes.Count));
 
-            if (bytes.Length > Transport.activeTransport.GetMaxPacketSize(channelId))
+            if (bytes.Count > Transport.activeTransport.GetMaxPacketSize(channelId))
             {
                 Debug.LogError("NetworkConnection.SendBytes cannot send packet larger than " + Transport.activeTransport.GetMaxPacketSize(channelId) + " bytes");
                 return false;
             }
 
-            if (bytes.Length == 0)
+            if (bytes.Count == 0)
             {
                 // zero length packets getting into the packet queues are bad.
                 Debug.LogError("NetworkConnection.SendBytes cannot send zero bytes");
@@ -212,7 +212,7 @@ namespace Mirror
         public bool InvokeHandler<T>(T msg) where T : IMessageBase
         {
             int msgType = MessagePacker.GetId<T>();
-            byte[] data = MessagePacker.Pack(msg);
+            ArraySegment<byte> data = MessagePacker.Pack(msg);
             return InvokeHandler(msgType, new NetworkReader(data));
         }
 
@@ -245,7 +245,7 @@ namespace Mirror
             }
         }
 
-        public virtual bool TransportSend(int channelId, byte[] bytes)
+        public virtual bool TransportSend(int channelId, ArraySegment<byte> bytes)
         {
             if (Transport.activeTransport.ClientConnected())
             {
