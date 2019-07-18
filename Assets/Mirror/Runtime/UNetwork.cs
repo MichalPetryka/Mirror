@@ -2,9 +2,114 @@ using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using UnityEngine;
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+#if UNITY_2018_3_OR_NEWER && !UNITY_2019_1_OR_NEWER
+using System.Reflection;
+#else
+using UnityEditor;
+#endif
+#endif
 
 namespace Mirror
 {
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+#pragma warning disable 618
+    internal static class NetworkProfiler
+    {
+#if UNITY_2018_3_OR_NEWER && !UNITY_2019_1_OR_NEWER
+        private static readonly bool failedToLoad;
+        private static readonly Type networkDetailStats;
+
+        private static readonly MethodInfo newProfilerTick;
+        private static readonly MethodInfo setStat;
+        private static readonly MethodInfo incrementStat;
+        private static readonly MethodInfo resetAll;
+
+        private static readonly object[] newProfilerTickParameters = new object[1];
+        private static readonly object[] setStatParameters = new object[4];
+        private static readonly object[] incrementStatParameters = new object[4];
+
+        static NetworkProfiler()
+        {
+            networkDetailStats = Type.GetType("UnityEditor.NetworkDetailStats");
+            if (networkDetailStats != null)
+            {
+                newProfilerTick = networkDetailStats.GetMethod("NewProfilerTick", BindingFlags.Static | BindingFlags.Public);
+                setStat = networkDetailStats.GetMethod("SetStat", BindingFlags.Static | BindingFlags.Public);
+                incrementStat = networkDetailStats.GetMethod("IncrementStat", BindingFlags.Static | BindingFlags.Public);
+                resetAll = networkDetailStats.GetMethod("ResetAll", BindingFlags.Static | BindingFlags.Public);
+            }
+
+            failedToLoad = networkDetailStats == null || newProfilerTick == networkDetailStats || setStat == null || incrementStat == null || resetAll == null;
+        }
+#endif
+
+        internal enum NetworkDirection
+        {
+            Incoming,
+            Outgoing
+        }
+
+        internal static void NewProfilerTick(float newTime)
+        {
+#if UNITY_2018_3_OR_NEWER && !UNITY_2019_1_OR_NEWER
+            if (!failedToLoad)
+            {
+                newProfilerTickParameters[0] = newTime;
+                newProfilerTick.Invoke(null, newProfilerTickParameters);
+            }
+#else
+            NetworkDetailStats.NewProfilerTick(newTime);
+#endif
+        }
+
+        internal static void SetStat(NetworkDirection direction, short msgId, string entryName, int amount)
+        {
+#if UNITY_2018_3_OR_NEWER && !UNITY_2019_1_OR_NEWER
+            if (!failedToLoad)
+            {
+                setStatParameters[0] = direction;
+                setStatParameters[1] = msgId;
+                setStatParameters[2] = entryName;
+                setStatParameters[3] = amount;
+                setStat.Invoke(null, setStatParameters);
+            }
+#else
+            NetworkDetailStats.SetStat((NetworkDetailStats.NetworkDirection)direction, msgId, entryName, amount);
+#endif
+        }
+
+        internal static void IncrementStat(NetworkDirection direction, short msgId, string entryName, int amount)
+        {
+#if UNITY_2018_3_OR_NEWER && !UNITY_2019_1_OR_NEWER
+            if (!failedToLoad)
+            {
+                incrementStatParameters[0] = direction;
+                incrementStatParameters[1] = msgId;
+                incrementStatParameters[2] = entryName;
+                incrementStatParameters[3] = amount;
+                incrementStat.Invoke(null, incrementStatParameters);
+            }
+#else
+            NetworkDetailStats.IncrementStat((NetworkDetailStats.NetworkDirection)direction, msgId, entryName, amount);
+#endif
+        }
+
+        internal static void ResetAll()
+        {
+#if UNITY_2018_3_OR_NEWER && !UNITY_2019_1_OR_NEWER
+            if (!failedToLoad)
+            {
+                resetAll.Invoke(null, null);
+            }
+#else
+            NetworkDetailStats.ResetAll();
+#endif
+        }
+    }
+#pragma warning restore 618
+#endif
+
     // Handles network messages on client and server
     public delegate void NetworkMessageDelegate(NetworkMessage netMsg);
 
