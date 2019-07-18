@@ -5,9 +5,10 @@ using UnityEngine;
 #if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
 #if UNITY_2018_3_OR_NEWER && !UNITY_2019_1_OR_NEWER
 using System.Reflection;
-#else
-using UnityEditor;
+using System.Linq;
 #endif
+using UnityEngine.Networking;
+using UnityEditor;
 #endif
 
 namespace Mirror
@@ -18,12 +19,14 @@ namespace Mirror
     {
 #if UNITY_2018_3_OR_NEWER && !UNITY_2019_1_OR_NEWER
         private static readonly bool failedToLoad;
-        private static readonly Type networkDetailStats;
 
         private static readonly MethodInfo newProfilerTick;
         private static readonly MethodInfo setStat;
         private static readonly MethodInfo incrementStat;
         private static readonly MethodInfo resetAll;
+
+        private static readonly object incoming;
+        private static readonly object outgoing;
 
         private static readonly object[] newProfilerTickParameters = new object[1];
         private static readonly object[] setStatParameters = new object[4];
@@ -31,18 +34,34 @@ namespace Mirror
 
         static NetworkProfiler()
         {
-            networkDetailStats = Type.GetType("UnityEditor.NetworkDetailStats");
+            NetworkTransport.Init();
+            Type networkDetailStats = typeof(FileUtil).Assembly.GetTypes().FirstOrDefault(type => type.Name == "NetworkDetailStats");
             if (networkDetailStats != null)
             {
                 newProfilerTick = networkDetailStats.GetMethod("NewProfilerTick", BindingFlags.Static | BindingFlags.Public);
                 setStat = networkDetailStats.GetMethod("SetStat", BindingFlags.Static | BindingFlags.Public);
                 incrementStat = networkDetailStats.GetMethod("IncrementStat", BindingFlags.Static | BindingFlags.Public);
                 resetAll = networkDetailStats.GetMethod("ResetAll", BindingFlags.Static | BindingFlags.Public);
+                Array directions = networkDetailStats.GetNestedType("NetworkDirection")?.GetEnumValues();
+                incoming = directions?.GetValue(0);
+                outgoing = directions?.GetValue(1);
             }
 
-            failedToLoad = networkDetailStats == null || newProfilerTick == networkDetailStats || setStat == null || incrementStat == null || resetAll == null;
+            failedToLoad = networkDetailStats == null || newProfilerTick == networkDetailStats || setStat == null || incrementStat == null || resetAll == null || incoming == null || outgoing == null;
+            Debug.Log(failedToLoad);
+        }
+#else
+        static NetworkProfiler()
+        {
+            NetworkTransport.Init();
         }
 #endif
+
+        internal static void Stop()
+        {
+            ResetAll();
+            NetworkTransport.Shutdown();
+        }
 
         internal enum NetworkDirection
         {
@@ -68,7 +87,7 @@ namespace Mirror
 #if UNITY_2018_3_OR_NEWER && !UNITY_2019_1_OR_NEWER
             if (!failedToLoad)
             {
-                setStatParameters[0] = direction;
+                setStatParameters[0] = direction == NetworkDirection.Incoming ? incoming : outgoing;
                 setStatParameters[1] = msgId;
                 setStatParameters[2] = entryName;
                 setStatParameters[3] = amount;
@@ -84,7 +103,7 @@ namespace Mirror
 #if UNITY_2018_3_OR_NEWER && !UNITY_2019_1_OR_NEWER
             if (!failedToLoad)
             {
-                incrementStatParameters[0] = direction;
+                incrementStatParameters[0] = direction == NetworkDirection.Incoming ? incoming : outgoing;
                 incrementStatParameters[1] = msgId;
                 incrementStatParameters[2] = entryName;
                 incrementStatParameters[3] = amount;

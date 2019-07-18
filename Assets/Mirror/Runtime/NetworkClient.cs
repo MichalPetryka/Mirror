@@ -363,6 +363,9 @@ namespace Mirror
 
         public static void Shutdown()
         {
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+            NetworkProfiler.ResetAll();
+#endif
             if (LogFilter.Debug) Debug.Log("Shutting down client.");
             ClientScene.Shutdown();
             connectState = ConnectState.None;

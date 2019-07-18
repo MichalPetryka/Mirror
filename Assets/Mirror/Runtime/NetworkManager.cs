@@ -174,6 +174,9 @@ namespace Mirror
         // virtual so that inheriting classes' LateUpdate() can call base.LateUpdate() too
         public virtual void LateUpdate()
         {
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+            NetworkProfiler.NewProfilerTick(Time.time);
+#endif
             // call it while the NetworkManager exists.
             // -> we don't only call while Client/Server.Connected, because then we would stop if disconnected and the
             //    NetworkClient wouldn't receive the last Disconnect event, result in all kinds of issues
@@ -189,6 +192,9 @@ namespace Mirror
         // base.OnApplicationQuit() too
         public virtual void OnApplicationQuit()
         {
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+            NetworkProfiler.ResetAll();
+#endif
             // stop client first
             // (we want to send the quit packet to the server instead of waiting
             //  for a timeout)
@@ -210,6 +216,10 @@ namespace Mirror
             //  until we press Start again. so if Transports use threads, we
             //  really want them to end now and not after next start)
             Transport.activeTransport.Shutdown();
+
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+            NetworkProfiler.Stop();
+#endif
         }
 
         // virtual so that inheriting classes' OnValidate() can call base.OnValidate() too
@@ -715,25 +725,25 @@ namespace Mirror
             NetworkServer.AddPlayerForConnection(conn, player);
         }
 
-		public Transform GetStartPosition()
-		{
-			// first remove any dead transforms
-			startPositions.RemoveAll(t => t == null);
+        public Transform GetStartPosition()
+        {
+            // first remove any dead transforms
+            startPositions.RemoveAll(t => t == null);
 
-			if (startPositions.Count == 0)
-				return null;
+            if (startPositions.Count == 0)
+                return null;
 
-			if (playerSpawnMethod == PlayerSpawnMethod.Random)
-			{
-				return startPositions[UnityEngine.Random.Range(0, startPositions.Count)];
-			}
-			else
-			{
-				Transform startPosition = startPositions[startPositionIndex];
-				startPositionIndex = (startPositionIndex + 1) % startPositions.Count;
-				return startPosition;
-			}
-		}
+            if (playerSpawnMethod == PlayerSpawnMethod.Random)
+            {
+                return startPositions[UnityEngine.Random.Range(0, startPositions.Count)];
+            }
+            else
+            {
+                Transform startPosition = startPositions[startPositionIndex];
+                startPositionIndex = (startPositionIndex + 1) % startPositions.Count;
+                return startPosition;
+            }
+        }
 
         public virtual void OnServerRemovePlayer(NetworkConnection conn, NetworkIdentity player)
         {

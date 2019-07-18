@@ -118,6 +118,9 @@ namespace Mirror
         [EditorBrowsable(EditorBrowsableState.Never), Obsolete("use Send<T> instead")]
         public virtual bool Send(int msgType, MessageBase msg, int channelId = Channels.DefaultReliable)
         {
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+            NetworkProfiler.IncrementStat(NetworkProfiler.NetworkDirection.Outgoing, (short)msgType, "Send (deprecated)", 1);
+#endif
             // pack message and send
             byte[] message = MessagePacker.PackMessage(msgType, msg);
             return SendBytes(message, channelId);
@@ -125,6 +128,9 @@ namespace Mirror
 
         public virtual bool Send<T>(T msg, int channelId = Channels.DefaultReliable) where T: IMessageBase
         {
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+            NetworkProfiler.IncrementStat(NetworkProfiler.NetworkDirection.Outgoing, (short)MessagePacker.GetId<T>(), "Send", 1);
+#endif
             // pack message and send
             byte[] message = MessagePacker.Pack(msg);
             return SendBytes(message, channelId);
@@ -229,6 +235,9 @@ namespace Mirror
             NetworkReader reader = new NetworkReader(buffer);
             if (MessagePacker.UnpackMessage(reader, out int msgType))
             {
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+                NetworkProfiler.IncrementStat(NetworkProfiler.NetworkDirection.Incoming, (short)msgType, "Receive", 1);
+#endif
                 // logging
                 if (logNetworkMessages) Debug.Log("ConnectionRecv con:" + connectionId + " msgType:" + msgType + " content:" + BitConverter.ToString(buffer.Array, buffer.Offset, buffer.Count));
 

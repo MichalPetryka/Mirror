@@ -54,6 +54,10 @@ namespace Mirror
             dontListen = false;
             active = false;
 
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+            NetworkProfiler.ResetAll();
+#endif
+
             NetworkIdentity.ResetNextNetworkId();
         }
 
@@ -172,6 +176,9 @@ namespace Mirror
             {
                 // pack message into byte[] once
                 byte[] bytes = MessagePacker.PackMessage((ushort)msgType, msg);
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+                NetworkProfiler.IncrementStat(NetworkProfiler.NetworkDirection.Outgoing, msgType, "SendToObservers (deprecated)", identity.observers.Count);
+#endif
 
                 // send to all observers
                 bool result = true;
@@ -194,6 +201,9 @@ namespace Mirror
             {
                 // pack message into byte[] once
                 byte[] bytes = MessagePacker.Pack(msg);
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+                NetworkProfiler.IncrementStat(NetworkProfiler.NetworkDirection.Outgoing, (short)MessagePacker.GetId<T>(), "SendToObservers", identity.observers.Count);
+#endif
 
                 bool result = true;
                 foreach (KeyValuePair<int, NetworkConnection> kvp in identity.observers)
@@ -212,6 +222,9 @@ namespace Mirror
 
             // pack message into byte[] once
             byte[] bytes = MessagePacker.PackMessage((ushort)msgType, msg);
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+            NetworkProfiler.IncrementStat(NetworkProfiler.NetworkDirection.Outgoing, (short)msgType, "SendToAll (deprecated)", connections.Count);
+#endif
 
             // send to all
             bool result = true;
@@ -228,6 +241,9 @@ namespace Mirror
 
             // pack message into byte[] once
             byte[] bytes = MessagePacker.Pack(msg);
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+            NetworkProfiler.IncrementStat(NetworkProfiler.NetworkDirection.Outgoing, (short)MessagePacker.GetId<T>(), "SendToAll", connections.Count);
+#endif
 
             bool result = true;
             foreach (KeyValuePair<int, NetworkConnection> kvp in connections)
@@ -253,6 +269,9 @@ namespace Mirror
                 {
                     if (kvp.Value.isReady)
                     {
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+                        NetworkProfiler.IncrementStat(NetworkProfiler.NetworkDirection.Outgoing, msgType, "SendToReady (deprecated)", 1);
+#endif
                         result &= kvp.Value.SendBytes(bytes, channelId);
                     }
                 }
@@ -275,6 +294,9 @@ namespace Mirror
                 {
                     if (kvp.Value.isReady)
                     {
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+                        NetworkProfiler.IncrementStat(NetworkProfiler.NetworkDirection.Outgoing, (short)MessagePacker.GetId<T>(), "SendToReady", 1);
+#endif
                         result &= kvp.Value.SendBytes(bytes, channelId);
                     }
                 }
