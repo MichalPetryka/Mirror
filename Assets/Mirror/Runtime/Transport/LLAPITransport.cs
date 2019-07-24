@@ -87,6 +87,8 @@ namespace Mirror
 
         void Awake()
         {
+            if (NetworkTransport.IsStarted)
+                NetworkTransport.Shutdown();
             NetworkTransport.Init(globalConfig);
             Debug.Log("LLAPITransport initialized!");
         }
