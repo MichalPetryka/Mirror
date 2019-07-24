@@ -27,6 +27,7 @@ namespace Mirror
 
         private static readonly object incoming;
         private static readonly object outgoing;
+        private static readonly object boxedOne = 1;
 
         private static readonly object[] newProfilerTickParameters = new object[1];
         private static readonly object[] setStatParameters = new object[4];
@@ -34,8 +35,7 @@ namespace Mirror
 
         static NetworkProfiler()
         {
-            NetworkTransport.Init();
-            Type networkDetailStats = typeof(FileUtil).Assembly.GetTypes().FirstOrDefault(type => type.Name == "NetworkDetailStats");
+            Type networkDetailStats = typeof(FileUtil).Assembly.GetType("UnityEditor.NetworkDetailStats");
             if (networkDetailStats != null)
             {
                 newProfilerTick = networkDetailStats.GetMethod("NewProfilerTick", BindingFlags.Static | BindingFlags.Public);
@@ -48,19 +48,31 @@ namespace Mirror
             }
 
             failedToLoad = networkDetailStats == null || newProfilerTick == networkDetailStats || setStat == null || incrementStat == null || resetAll == null || incoming == null || outgoing == null;
-            Debug.Log(failedToLoad);
+            if (!failedToLoad && !NetworkTransport.IsStarted)
+            {
+                NetworkTransport.Init();
+            }
         }
 #else
         static NetworkProfiler()
         {
-            NetworkTransport.Init();
+            if (!NetworkTransport.IsStarted)
+            {
+                NetworkTransport.Init();
+            }
         }
 #endif
 
         internal static void Stop()
         {
+#if UNITY_2018_3_OR_NEWER && !UNITY_2019_1_OR_NEWER
+            if (failedToLoad) return;
+#endif
             ResetAll();
-            NetworkTransport.Shutdown();
+            if (NetworkTransport.IsStarted)
+            {
+                NetworkTransport.Shutdown();
+            }
         }
 
         internal enum NetworkDirection
@@ -82,15 +94,15 @@ namespace Mirror
 #endif
         }
 
-        internal static void SetStat(NetworkDirection direction, short msgId, string entryName, int amount)
+        internal static void SetStat(NetworkDirection direction, Type message, int amount)
         {
 #if UNITY_2018_3_OR_NEWER && !UNITY_2019_1_OR_NEWER
             if (!failedToLoad)
             {
                 setStatParameters[0] = direction == NetworkDirection.Incoming ? incoming : outgoing;
-                setStatParameters[1] = msgId;
-                setStatParameters[2] = entryName;
-                setStatParameters[3] = amount;
+                setStatParameters[1] = TypeToId(message);
+                setStatParameters[2] = message.Name;
+                setStatParameters[3] = amount == 1 ? boxedOne : amount;
                 setStat.Invoke(null, setStatParameters);
             }
 #else
@@ -98,15 +110,15 @@ namespace Mirror
 #endif
         }
 
-        internal static void IncrementStat(NetworkDirection direction, short msgId, string entryName, int amount)
+        internal static void IncrementStat(NetworkDirection direction, Type message, int amount)
         {
 #if UNITY_2018_3_OR_NEWER && !UNITY_2019_1_OR_NEWER
             if (!failedToLoad)
             {
                 incrementStatParameters[0] = direction == NetworkDirection.Incoming ? incoming : outgoing;
-                incrementStatParameters[1] = msgId;
-                incrementStatParameters[2] = entryName;
-                incrementStatParameters[3] = amount;
+                incrementStatParameters[1] = TypeToId(message);
+                incrementStatParameters[2] = message.Name;
+                incrementStatParameters[3] = amount == 1 ? boxedOne : amount;
                 incrementStat.Invoke(null, incrementStatParameters);
             }
 #else
@@ -124,6 +136,25 @@ namespace Mirror
 #else
             NetworkDetailStats.ResetAll();
 #endif
+        }
+
+        private static short TypeToId(Type type)
+        {
+            if (type == typeof(ObjectDestroyMessage))
+                return 1;
+            if (type == typeof(RpcMessage))
+                return 2;
+            if (type == typeof(ObjectSpawnStartedMessage) || type == typeof(ObjectSpawnFinishedMessage))
+                return 3;
+            if (type == typeof(CommandMessage))
+                return 5;
+            if (type == typeof(SyncEventMessage))
+                return 7;
+            if (type == typeof(UpdateVarsMessage))
+                return 8;
+            if (type == typeof(UpdateVarsMessage))
+                return 9;
+            return 0;
         }
     }
 #pragma warning restore 618

@@ -123,6 +123,9 @@ namespace Mirror
             try
             {
                 message = networkMessage.ReadMessage<T>();
+#if UNITY_EDITOR && !UNITY_2020_1_OR_NEWER
+                NetworkProfiler.IncrementStat(NetworkProfiler.NetworkDirection.Incoming, typeof(T), 1);
+#endif
             }
             catch (Exception exception)
             {
