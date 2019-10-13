@@ -12,11 +12,30 @@ namespace Mirror
 
         // create writer immediately with it's own buffer so no one can mess with it and so that we can resize it.
         // note: BinaryWriter allocates too much, so we only use a MemoryStream
-        readonly MemoryStream stream = new MemoryStream();
+        readonly MemoryStream _stream = new MemoryStream();
+        MemoryStream stream
+        {
+            get
+            {
+                validCache = false;
+                return _stream;
+            }
+        }
+
+        internal bool validCache;
+        byte[] data;
+        
+        internal bool pooled;
+        internal readonly bool reusable;
 
         // 'int' is the best type for .Position. 'short' is too small if we send >32kb which would result in negative .Position
         // -> converting long to int is fine until 2GB of data (MAX_INT), so we don't have to worry about overflows here
         public int Position { get { return (int)stream.Position; } set { stream.Position = value; } }
+
+        public NetworkWriter(bool reusable = false)
+        {
+            this.reusable = reusable;
+        }
 
         // MemoryStream has 3 values: Position, Length and Capacity.
         // Position is used to indicate where we are writing
@@ -25,8 +44,13 @@ namespace Mirror
         // ToArray returns all the data we have written,  regardless of the current position
         public byte[] ToArray()
         {
-            stream.Flush();
-            return stream.ToArray();
+            if (!validCache)
+            {
+                stream.Flush();
+                data = stream.ToArray();
+                validCache = true;
+            }
+            return data;
         }
 
         // Gets the serialized data in an ArraySegment<byte>
@@ -247,10 +271,14 @@ namespace Mirror
             // (note: original HLAPI would write "" for null strings, but if a
             //        string is null on the server then it should also be null
             //        on the client)
-            if (value == null)
+            switch (value)
             {
-                writer.WriteUInt16((ushort)0);
-                return;
+                case null:
+                    writer.WriteUInt16(0);
+                    return;
+                case "":
+                    writer.WriteUInt16(1);
+                    return;
             }
 
             // write string with same method as NetworkReader

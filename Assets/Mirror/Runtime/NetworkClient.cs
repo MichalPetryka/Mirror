@@ -73,7 +73,7 @@ namespace Mirror
         // local client in host mode might call Cmds/Rpcs during Update, but we
         // want to apply them in LateUpdate like all other Transport messages
         // to avoid race conditions. keep packets in Queue until LateUpdate.
-        internal static Queue<byte[]> localClientPacketQueue = new Queue<byte[]>();
+        internal static Queue<NetworkWriter> localClientPacketQueue = new Queue<NetworkWriter>();
 
         /// <summary>
         /// Connect client to a NetworkServer instance.
@@ -272,10 +272,11 @@ namespace Mirror
                 // process internal messages so they are applied at the correct time
                 while (localClientPacketQueue.Count > 0)
                 {
-                    byte[] packet = localClientPacketQueue.Dequeue();
+                    NetworkWriter writer = localClientPacketQueue.Dequeue();
                     // TODO avoid serializing and deserializng the message
                     // just pass it as is
-                    OnDataReceived(new ArraySegment<byte>(packet), Channels.DefaultReliable);
+                    OnDataReceived(writer.ToArraySegment(), Channels.DefaultReliable);
+                    NetworkWriterPool.Recycle(writer);
                 }
             }
             else

@@ -27,16 +27,33 @@ namespace Mirror
         // -> converting long to int is fine until 2GB of data (MAX_INT), so we don't have to worry about overflows here
         public int Position;
         public int Length => buffer.Count;
+        internal bool pooled;
+        internal readonly bool reusable;
 
-
-        public NetworkReader(byte[] bytes)
+        public NetworkReader(byte[] bytes, bool reusable = false)
         {
             buffer = new ArraySegment<byte>(bytes);
+            Position = 0;
+            this.reusable = reusable;
         }
 
-        public NetworkReader(ArraySegment<byte> segment)
+        public NetworkReader(ArraySegment<byte> segment, bool reusable = false)
         {
             buffer = segment;
+            Position = 0;
+            this.reusable = reusable;
+        }
+
+        internal void SetBuffer(byte[] bytes)
+        {
+            buffer = new ArraySegment<byte>(bytes);
+            Position = 0;
+        }
+
+        internal void SetBuffer(ArraySegment<byte> segment)
+        {
+            buffer = segment;
+            Position = 0;
         }
 
         public byte ReadByte()
@@ -50,8 +67,7 @@ namespace Mirror
         public int ReadInt32() => (int)ReadUInt32();
         public uint ReadUInt32()
         {
-            uint value = 0;
-            value |= ReadByte();
+            uint value = ReadByte();
             value |= (uint)(ReadByte() << 8);
             value |= (uint)(ReadByte() << 16);
             value |= (uint)(ReadByte() << 24);
@@ -60,8 +76,7 @@ namespace Mirror
         public long ReadInt64() => (long)ReadUInt64();
         public ulong ReadUInt64()
         {
-            ulong value = 0;
-            value |= ReadByte();
+            ulong value = ReadByte();
             value |= ((ulong)ReadByte()) << 8;
             value |= ((ulong)ReadByte()) << 16;
             value |= ((ulong)ReadByte()) << 24;
@@ -123,16 +138,14 @@ namespace Mirror
         public static short ReadInt16(this NetworkReader reader) => (short)reader.ReadUInt16();
         public static ushort ReadUInt16(this NetworkReader reader)
         {
-            ushort value = 0;
-            value |= reader.ReadByte();
+            ushort value = reader.ReadByte();
             value |= (ushort)(reader.ReadByte() << 8);
             return value;
         }
         public static int ReadInt32(this NetworkReader reader) => (int)reader.ReadUInt32();
         public static uint ReadUInt32(this NetworkReader reader)
         {
-            uint value = 0;
-            value |= reader.ReadByte();
+            uint value = reader.ReadByte();
             value |= (uint)(reader.ReadByte() << 8);
             value |= (uint)(reader.ReadByte() << 16);
             value |= (uint)(reader.ReadByte() << 24);
@@ -141,8 +154,7 @@ namespace Mirror
         public static long ReadInt64(this NetworkReader reader) => (long)reader.ReadUInt64();
         public static ulong ReadUInt64(this NetworkReader reader)
         {
-            ulong value = 0;
-            value |= reader.ReadByte();
+            ulong value = reader.ReadByte();
             value |= ((ulong)reader.ReadByte()) << 8;
             value |= ((ulong)reader.ReadByte()) << 16;
             value |= ((ulong)reader.ReadByte()) << 24;
@@ -154,21 +166,17 @@ namespace Mirror
         }
         public static float ReadSingle(this NetworkReader reader)
         {
-            UIntFloat converter = new UIntFloat();
-            converter.intValue = reader.ReadUInt32();
+            UIntFloat converter = new UIntFloat {intValue = reader.ReadUInt32()};
             return converter.floatValue;
         }
         public static double ReadDouble(this NetworkReader reader)
         {
-            UIntDouble converter = new UIntDouble();
-            converter.longValue = reader.ReadUInt64();
+            UIntDouble converter = new UIntDouble {longValue = reader.ReadUInt64()};
             return converter.doubleValue;
         }
         public static decimal ReadDecimal(this NetworkReader reader)
         {
-            UIntDecimal converter = new UIntDecimal();
-            converter.longValue1 = reader.ReadUInt64();
-            converter.longValue2 = reader.ReadUInt64();
+            UIntDecimal converter = new UIntDecimal {longValue1 = reader.ReadUInt64(), longValue2 = reader.ReadUInt64()};
             return converter.decimalValue;
         }
 
@@ -179,8 +187,13 @@ namespace Mirror
             // read number of bytes
             ushort size = reader.ReadUInt16();
 
-            if (size == 0)
-                return null;
+            switch (size)
+            {
+                case 0:
+                    return null;
+                case 1:
+                    return "";
+            }
 
             int realSize = size - 1;
 

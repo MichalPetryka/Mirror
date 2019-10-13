@@ -241,14 +241,7 @@ namespace Mirror
             get => objects[i];
             set
             {
-                if (ContainsKey(i))
-                {
-                    AddOperation(Operation.OP_SET, i, value);
-                }
-                else
-                {
-                    AddOperation(Operation.OP_ADD, i, value);
-                }
+                AddOperation(ContainsKey(i) ? Operation.OP_SET : Operation.OP_ADD, i, value);
                 objects[i] = value;
             }
         }
@@ -272,11 +265,11 @@ namespace Mirror
         {
             if (array == null)
             {
-                throw new System.ArgumentNullException("Array Is Null");
+                throw new System.ArgumentNullException(nameof(array), "Array Is Null");
             }
             if (arrayIndex < 0 || arrayIndex > array.Length)
             {
-                throw new System.ArgumentOutOfRangeException("Array Index Out of Range");
+                throw new System.ArgumentOutOfRangeException(nameof(arrayIndex), "Array Index Out of Range");
             }
             if (array.Length - arrayIndex < Count)
             {
@@ -301,8 +294,8 @@ namespace Mirror
             return result;
         }
 
-        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() => ((IDictionary<TKey, TValue>)objects).GetEnumerator();
+        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() => objects.GetEnumerator();
 
-        IEnumerator IEnumerable.GetEnumerator() => ((IDictionary<TKey, TValue>)objects).GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => objects.GetEnumerator();
     }
 }

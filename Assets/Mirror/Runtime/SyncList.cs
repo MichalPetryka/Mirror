@@ -54,6 +54,7 @@ namespace Mirror
         public int Count => objects.Count;
         public bool IsReadOnly { get; private set; }
         public event SyncListChanged Callback;
+        int version;
 
         public enum Operation : byte
         {
@@ -284,12 +285,14 @@ namespace Mirror
         {
             objects.Add(item);
             AddOperation(Operation.OP_ADD, objects.Count - 1, item);
+            version++;
         }
 
         public void Clear()
         {
             objects.Clear();
             AddOperation(Operation.OP_CLEAR, 0);
+            version++;
         }
 
         public bool Contains(T item) => objects.Contains(item);
@@ -310,6 +313,7 @@ namespace Mirror
         {
             objects.Insert(index, item);
             AddOperation(Operation.OP_INSERT, index, item);
+            version++;
         }
 
         public bool Remove(T item)
@@ -318,6 +322,7 @@ namespace Mirror
             if (result)
             {
                 AddOperation(Operation.OP_REMOVE, 0, item);
+                version++;
             }
             return result;
         }
@@ -326,6 +331,7 @@ namespace Mirror
         {
             objects.RemoveAt(index);
             AddOperation(Operation.OP_REMOVEAT, index);
+            version++;
         }
 
         public void Dirty(int index)
@@ -342,12 +348,50 @@ namespace Mirror
                 {
                     objects[i] = value;
                     AddOperation(Operation.OP_SET, i, value);
+                    version++;
                 }
             }
         }
 
-        public IEnumerator<T> GetEnumerator() => objects.GetEnumerator();
+        public SyncListEnumerator GetEnumerator() => new SyncListEnumerator(this);
 
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        IEnumerator<T> IEnumerable<T>.GetEnumerator() => new SyncListEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => new SyncListEnumerator(this);
+
+        public struct SyncListEnumerator : IEnumerator<T>
+        {
+            readonly SyncList<T> list;
+            int curIndex;
+            readonly int version;
+            public T Current { get; private set; }
+
+            public SyncListEnumerator(SyncList<T> list)
+            {
+                this.list = list;
+                curIndex = -1;
+                version = list.version;
+                Current = default;
+            }
+
+            public bool MoveNext()
+            {
+                if (version != list.version)
+                {
+                    throw new InvalidOperationException("Collection was modified; enumeration operation may not execute.");
+                }
+                if (++curIndex >= list.Count)
+                {
+                    return false;
+                }
+                Current = list[curIndex];
+                return true;
+            }
+
+            public void Reset() => curIndex = -1;
+
+            object IEnumerator.Current => Current;
+
+            public void Dispose() { }
+        }
     }
 }

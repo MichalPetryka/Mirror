@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -86,10 +87,11 @@ namespace Mirror
                     continue;
                 }
 
-                NetworkWriter writer = new NetworkWriter();
+                NetworkWriter writer = NetworkWriterPool.GetWriter();
                 WriteParameters(writer);
 
-                SendAnimationMessage(stateHash, normalizedTime, i, writer.ToArray());
+                SendAnimationMessage(stateHash, normalizedTime, i, writer.ToArraySegment());
+                NetworkWriterPool.Recycle(writer);
             }
         }
 
@@ -134,15 +136,16 @@ namespace Mirror
             {
                 sendTimer = Time.time + syncInterval;
 
-                NetworkWriter writer = new NetworkWriter();
+                NetworkWriter writer = NetworkWriterPool.GetWriter();
                 if (WriteParameters(writer))
                 {
-                    SendAnimationParametersMessage(writer.ToArray());
+                    SendAnimationParametersMessage(writer.ToArraySegment());
                 }
+                NetworkWriterPool.Recycle(writer);
             }
         }
 
-        void SendAnimationMessage(int stateHash, float normalizedTime, int layerId, byte[] parameters)
+        void SendAnimationMessage(int stateHash, float normalizedTime, int layerId, ArraySegment<byte> parameters)
         {
             if (isServer)
             {
@@ -154,7 +157,7 @@ namespace Mirror
             }
         }
 
-        void SendAnimationParametersMessage(byte[] parameters)
+        void SendAnimationParametersMessage(ArraySegment<byte> parameters)
         {
             if (isServer)
             {
@@ -377,20 +380,24 @@ namespace Mirror
 
         #region server message handlers
         [Command]
-        void CmdOnAnimationServerMessage(int stateHash, float normalizedTime, int layerId, byte[] parameters)
+        void CmdOnAnimationServerMessage(int stateHash, float normalizedTime, int layerId, ArraySegment<byte> parameters)
         {
             if (LogFilter.Debug) Debug.Log("OnAnimationMessage for netId=" + netId);
 
             // handle and broadcast
-            HandleAnimMsg(stateHash, normalizedTime, layerId, new NetworkReader(parameters));
+            NetworkReader reader = NetworkReaderPool.GetReader(parameters);
+            HandleAnimMsg(stateHash, normalizedTime, layerId, reader);
+            NetworkReaderPool.Recycle(reader);
             RpcOnAnimationClientMessage(stateHash, normalizedTime, layerId, parameters);
         }
 
         [Command]
-        void CmdOnAnimationParametersServerMessage(byte[] parameters)
+        void CmdOnAnimationParametersServerMessage(ArraySegment<byte> parameters)
         {
             // handle and broadcast
-            HandleAnimParamsMsg(new NetworkReader(parameters));
+            NetworkReader reader = NetworkReaderPool.GetReader(parameters);
+            HandleAnimParamsMsg(reader);
+            NetworkReaderPool.Recycle(reader);
             RpcOnAnimationParametersClientMessage(parameters);
         }
 
@@ -405,15 +412,19 @@ namespace Mirror
 
         #region client message handlers
         [ClientRpc]
-        void RpcOnAnimationClientMessage(int stateHash, float normalizedTime, int layerId, byte[] parameters)
+        void RpcOnAnimationClientMessage(int stateHash, float normalizedTime, int layerId, ArraySegment<byte> parameters)
         {
-            HandleAnimMsg(stateHash, normalizedTime, layerId, new NetworkReader(parameters));
+            NetworkReader reader = NetworkReaderPool.GetReader(parameters);
+            HandleAnimMsg(stateHash, normalizedTime, layerId, reader);
+            NetworkReaderPool.Recycle(reader);
         }
 
         [ClientRpc]
-        void RpcOnAnimationParametersClientMessage(byte[] parameters)
+        void RpcOnAnimationParametersClientMessage(ArraySegment<byte> parameters)
         {
-            HandleAnimParamsMsg(new NetworkReader(parameters));
+            NetworkReader reader = NetworkReaderPool.GetReader(parameters);
+            HandleAnimParamsMsg(reader);
+            NetworkReaderPool.Recycle(reader);
         }
 
         // server sends this to one client

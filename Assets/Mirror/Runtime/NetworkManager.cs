@@ -891,7 +891,7 @@ namespace Mirror
         void OnServerErrorInternal(NetworkConnection conn, ErrorMessage msg)
         {
             if (LogFilter.Debug) Debug.Log("NetworkManager.OnServerErrorInternal");
-            OnServerError(conn, msg.value);
+            OnServerError(conn, msg.error);
         }
 
         #endregion
@@ -955,7 +955,7 @@ namespace Mirror
         void OnClientErrorInternal(NetworkConnection conn, ErrorMessage msg)
         {
             if (LogFilter.Debug) Debug.Log("NetworkManager:OnClientErrorInternal");
-            OnClientError(conn, msg.value);
+            OnClientError(conn, msg.error);
         }
 
         void OnClientSceneInternal(NetworkConnection conn, SceneMessage msg)

@@ -140,7 +140,26 @@ namespace Mirror
     #endregion
 
     #region Public System Messages
-    public class ErrorMessage : ByteMessage { }
+
+    public struct ErrorMessage : IMessageBase
+    {
+        public byte error;
+
+        public ErrorMessage(byte v)
+        {
+            error = v;
+        }
+
+        public void Deserialize(NetworkReader reader)
+        {
+            error = reader.ReadByte();
+        }
+
+        public void Serialize(NetworkWriter writer)
+        {
+            writer.WriteByte(error);
+        }
+    }
 
     public struct ReadyMessage : IMessageBase
     {

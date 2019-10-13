@@ -16,6 +16,8 @@
 // * Only way for smooth movement is to use a fixed movement speed during
 //   interpolation. interpolation over time is never that good.
 //
+
+using System;
 using UnityEngine;
 
 namespace Mirror
@@ -28,7 +30,7 @@ namespace Mirror
         // to save bandwidth in the first place.
         // -> can still be modified in the Inspector while the game is running,
         //    but would cause errors immediately and be pretty obvious.
-        [Tooltip("Compresses 16 Byte Quaternion into None=12, Much=3, Lots=2 Byte")]
+        [Tooltip("Compresses 16 Byte Quaternion into None=12, Much=3, Lots=2 Bytes")]
         [SerializeField] Compression compressRotation = Compression.Much;
         public enum Compression { None, Much, Lots, NoRotation }; // easily understandable and funny
 
@@ -69,24 +71,24 @@ namespace Mirror
             // -> quaternion->euler->quaternion always works.
             // -> gimbal lock only occurs when adding.
             Vector3 euler = rotation.eulerAngles;
-            if (compressRotation == Compression.None)
+            switch (compressRotation)
             {
-                // write 3 floats = 12 byte
-                writer.WriteSingle(euler.x);
-                writer.WriteSingle(euler.y);
-                writer.WriteSingle(euler.z);
-            }
-            else if (compressRotation == Compression.Much)
-            {
-                // write 3 byte. scaling [0,360] to [0,255]
-                writer.WriteByte(FloatBytePacker.ScaleFloatToByte(euler.x, 0, 360, byte.MinValue, byte.MaxValue));
-                writer.WriteByte(FloatBytePacker.ScaleFloatToByte(euler.y, 0, 360, byte.MinValue, byte.MaxValue));
-                writer.WriteByte(FloatBytePacker.ScaleFloatToByte(euler.z, 0, 360, byte.MinValue, byte.MaxValue));
-            }
-            else if (compressRotation == Compression.Lots)
-            {
-                // write 2 byte, 5 bits for each float
-                writer.WriteUInt16(FloatBytePacker.PackThreeFloatsIntoUShort(euler.x, euler.y, euler.z, 0, 360));
+                case Compression.None:
+                    // write 3 floats = 12 byte
+                    writer.WriteSingle(euler.x);
+                    writer.WriteSingle(euler.y);
+                    writer.WriteSingle(euler.z);
+                    break;
+                case Compression.Much:
+                    // write 3 byte. scaling [0,360] to [0,255]
+                    writer.WriteByte(FloatBytePacker.ScaleFloatToByte(euler.x, 0, 360, byte.MinValue, byte.MaxValue));
+                    writer.WriteByte(FloatBytePacker.ScaleFloatToByte(euler.y, 0, 360, byte.MinValue, byte.MaxValue));
+                    writer.WriteByte(FloatBytePacker.ScaleFloatToByte(euler.z, 0, 360, byte.MinValue, byte.MaxValue));
+                    break;
+                case Compression.Lots:
+                    // write 2 byte, 5 bits for each float
+                    writer.WriteUInt16(FloatBytePacker.PackThreeFloatsIntoUShort(euler.x, euler.y, euler.z, 0, 360));
+                    break;
             }
 
             // serialize scale
@@ -105,10 +107,10 @@ namespace Mirror
         // => if this is the first time ever then we use our best guess:
         //    -> delta based on transform.localPosition
         //    -> elapsed based on send interval hoping that it roughly matches
-        static float EstimateMovementSpeed(DataPoint from, DataPoint to, Transform transform, float sendInterval)
+        static float EstimateMovementSpeed(DataPoint from, Vector3 toPosition, float toTimestap, Transform transform, float sendInterval)
         {
-            Vector3 delta = to.localPosition - (from != null ? from.localPosition : transform.localPosition);
-            float elapsed = from != null ? to.timeStamp - from.timeStamp : sendInterval;
+            Vector3 delta = toPosition - (from != null ? from.localPosition : transform.localPosition);
+            float elapsed = from != null ? toTimestap - from.timeStamp : sendInterval;
             return elapsed > 0 ? delta.magnitude / elapsed : 0; // avoid NaN
         }
 
@@ -116,57 +118,61 @@ namespace Mirror
         void DeserializeFromReader(NetworkReader reader)
         {
             // put it into a data point immediately
-            DataPoint temp = new DataPoint
-            {
-                // deserialize position
-                localPosition = reader.ReadVector3()
-            };
+            Vector3 localPosition = reader.ReadVector3();
 
             // deserialize rotation
-            if (compressRotation == Compression.None)
+            Quaternion localRotation = default;
+            switch (compressRotation)
             {
-                // read 3 floats = 16 byte
-                float x = reader.ReadSingle();
-                float y = reader.ReadSingle();
-                float z = reader.ReadSingle();
-                temp.localRotation = Quaternion.Euler(x, y, z);
-            }
-            else if (compressRotation == Compression.Much)
-            {
-                // read 3 byte. scaling [0,255] to [0,360]
-                float x = FloatBytePacker.ScaleByteToFloat(reader.ReadByte(), byte.MinValue, byte.MaxValue, 0, 360);
-                float y = FloatBytePacker.ScaleByteToFloat(reader.ReadByte(), byte.MinValue, byte.MaxValue, 0, 360);
-                float z = FloatBytePacker.ScaleByteToFloat(reader.ReadByte(), byte.MinValue, byte.MaxValue, 0, 360);
-                temp.localRotation = Quaternion.Euler(x, y, z);
-            }
-            else if (compressRotation == Compression.Lots)
-            {
-                // read 2 byte, 5 bits per float
-                Vector3 xyz = FloatBytePacker.UnpackUShortIntoThreeFloats(reader.ReadUInt16(), 0, 360);
-                temp.localRotation = Quaternion.Euler(xyz.x, xyz.y, xyz.z);
+                case Compression.None:
+                {
+                    // read 3 floats = 16 byte
+                    float x = reader.ReadSingle();
+                    float y = reader.ReadSingle();
+                    float z = reader.ReadSingle();
+                    localRotation = Quaternion.Euler(x, y, z);
+                    break;
+                }
+                case Compression.Much:
+                {
+                    // read 3 byte. scaling [0,255] to [0,360]
+                    float x = FloatBytePacker.ScaleByteToFloat(reader.ReadByte(), byte.MinValue, byte.MaxValue, 0, 360);
+                    float y = FloatBytePacker.ScaleByteToFloat(reader.ReadByte(), byte.MinValue, byte.MaxValue, 0, 360);
+                    float z = FloatBytePacker.ScaleByteToFloat(reader.ReadByte(), byte.MinValue, byte.MaxValue, 0, 360);
+                    localRotation = Quaternion.Euler(x, y, z);
+                    break;
+                }
+                case Compression.Lots:
+                {
+                    // read 2 byte, 5 bits per float
+                    Vector3 xyz = FloatBytePacker.UnpackUShortIntoThreeFloats(reader.ReadUInt16(), 0, 360);
+                    localRotation = Quaternion.Euler(xyz.x, xyz.y, xyz.z);
+                    break;
+                }
             }
 
-            temp.localScale = reader.ReadVector3();
+            Vector3 localScale = reader.ReadVector3();
 
-            temp.timeStamp = Time.time;
+            float timeStamp = Time.time;
 
             // movement speed: based on how far it moved since last time
             // has to be calculated before 'start' is overwritten
-            temp.movementSpeed = EstimateMovementSpeed(goal, temp, targetComponent.transform, syncInterval);
+            float movementSpeed = EstimateMovementSpeed(goal, localPosition, timeStamp, targetComponent.transform, syncInterval);
 
             // reassign start wisely
             // -> first ever data point? then make something up for previous one
             //    so that we can start interpolation without waiting for next.
             if (start == null)
             {
+                Transform pos = targetComponent.transform;
                 start = new DataPoint
                 {
                     timeStamp = Time.time - syncInterval,
                     // local position/rotation for VR support
-                    localPosition = targetComponent.transform.localPosition,
-                    localRotation = targetComponent.transform.localRotation,
-                    localScale = targetComponent.transform.localScale,
-                    movementSpeed = temp.movementSpeed
+                    localPosition = pos.localPosition,
+                    localRotation = pos.localRotation,
+                    localScale = pos.localScale,
+                    movementSpeed = movementSpeed
                 };
             }
             // -> second or nth data point? then update previous, but:
@@ -201,24 +207,38 @@ namespace Mirror
             else
             {
                 float oldDistance = Vector3.Distance(start.localPosition, goal.localPosition);
-                float newDistance = Vector3.Distance(goal.localPosition, temp.localPosition);
+                float newDistance = Vector3.Distance(goal.localPosition, localPosition);
 
-                start = goal;
+                start.localPosition = goal.localPosition;
+                start.localRotation = goal.localRotation;
+                start.localScale = goal.localScale;
+                start.movementSpeed = goal.movementSpeed;
+                start.timeStamp = goal.timeStamp;
 
                 // teleport / lag / obstacle detection: only continue at current
                 // position if we aren't too far away
                 //
                 // // local position/rotation for VR support
-                if (Vector3.Distance(targetComponent.transform.localPosition, start.localPosition) < oldDistance + newDistance)
+                Transform pos = targetComponent.transform;
+                if (Vector3.Distance(pos.localPosition, start.localPosition) < oldDistance + newDistance)
                 {
-                    start.localPosition = targetComponent.transform.localPosition;
-                    start.localRotation = targetComponent.transform.localRotation;
-                    start.localScale = targetComponent.transform.localScale;
+                    start.localPosition = pos.localPosition;
+                    start.localRotation = pos.localRotation;
+                    start.localScale = pos.localScale;
                 }
             }
 
             // set new destination in any case. new data is best data.
-            goal = temp;
+            if (goal == null)
+            {
+                goal = new DataPoint();
+            }
+
+            goal.localPosition = localPosition;
+            goal.localRotation = localRotation;
+            goal.localScale = localScale;
+            goal.movementSpeed = movementSpeed;
+            goal.timeStamp = timeStamp;
         }
 
         public override void OnDeserialize(NetworkReader reader, bool initialState)
@@ -229,11 +249,12 @@ namespace Mirror
 
         // local authority client sends sync message to server for broadcasting
         [Command]
-        void CmdClientToServerSync(byte[] payload)
+        void CmdClientToServerSync(ArraySegment<byte> payload)
         {
             // deserialize payload
-            NetworkReader reader = new NetworkReader(payload);
+            NetworkReader reader = NetworkReaderPool.GetReader(payload);
             DeserializeFromReader(reader);
+            NetworkReaderPool.Recycle(reader);
 
             // server-only mode does no interpolation to save computations,
             // but let's set the position directly
@@ -373,11 +394,12 @@ namespace Mirror
                         {
                             // serialize
                             // local position/rotation for VR support
-                            NetworkWriter writer = new NetworkWriter();
+                            NetworkWriter writer = NetworkWriterPool.GetWriter();
                             SerializeIntoWriter(writer, targetComponent.transform.localPosition, targetComponent.transform.localRotation, compressRotation, targetComponent.transform.localScale);
 
                             // send to server
-                            CmdClientToServerSync(writer.ToArray());
+                            CmdClientToServerSync(writer.ToArraySegment());
+                            NetworkWriterPool.Recycle(writer);
                         }
                         lastClientSendTime = Time.time;
                     }

@@ -17,9 +17,9 @@ namespace Mirror
         {
             // LocalConnection doesn't support allocation-free sends yet.
             // previously we allocated in Mirror. now we do it here.
-            byte[] data = new byte[segment.Count];
-            Array.Copy(segment.Array, segment.Offset, data, 0, segment.Count);
-            NetworkClient.localClientPacketQueue.Enqueue(data);
+            NetworkWriter writer = NetworkWriterPool.GetWriter();
+            writer.WriteBytes(segment.Array, segment.Offset, segment.Count);
+            NetworkClient.localClientPacketQueue.Enqueue(writer);
             return true;
         }
     }

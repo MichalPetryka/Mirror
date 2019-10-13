@@ -86,7 +86,7 @@ namespace Mirror
         // unpack a message we received
         public static T Unpack<T>(byte[] data) where T : IMessageBase, new()
         {
-            NetworkReader reader = new NetworkReader(data);
+            NetworkReader reader = NetworkReaderPool.GetReader(data);
 
             int msgType = GetId<T>();
 
@@ -94,8 +94,9 @@ namespace Mirror
             if (id != msgType)
                 throw new FormatException("Invalid message,  could not unpack " + typeof(T).FullName);
 
-            T message = new T();
+            T message = typeof(T).IsValueType ? default : new T();
             message.Deserialize(reader);
+            NetworkReaderPool.Recycle(reader);
             return message;
         }
 
