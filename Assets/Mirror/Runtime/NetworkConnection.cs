@@ -386,7 +386,7 @@ namespace Mirror
             NetworkWriter writer = NetworkWriterPool.GetWriter();
 
             // pack and invoke
-            int msgType = MessagePacker.GetId(msg.GetType());
+            int msgType = MessagePacker.GetId(typeof(T).IsValueType ? typeof(T) : msg.GetType());
             MessagePacker.Pack(msg, writer);
             ArraySegment<byte> segment = writer.ToArraySegment();
             NetworkReader reader = NetworkReaderPool.GetReader(segment);

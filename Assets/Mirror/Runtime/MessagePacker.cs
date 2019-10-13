@@ -60,7 +60,7 @@ namespace Mirror
         public static void Pack<T>(T message, NetworkWriter writer) where T : IMessageBase
         {
             // write message type
-            int msgType = GetId(message.GetType());
+            int msgType = GetId(typeof(T).IsValueType ? typeof(T) : message.GetType());
             writer.WriteUInt16((ushort)msgType);
 
             // serialize message into writer
